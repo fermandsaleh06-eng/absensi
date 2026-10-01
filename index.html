@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Absensi & Monitoring Ruangan RSUD</title>
+    <meta name="theme-color" content="#0d6efd">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf for export to PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Header -->
+        <header id="app-header">
+            <button id="btn-back" class="hidden"><i class="fas fa-arrow-left"></i></button>
+            <h1 id="header-title">RSUD Monitoring</h1>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="app-main">
+            <!-- Screen: Home -->
+            <section id="screen-home" class="screen active">
+                <div class="home-hero">
+                    <i class="fas fa-hospital-user hero-icon"></i>
+                    <h2>ABSENSI & MONITORING RUANGAN</h2>
+                    <p id="home-date" class="date-badge"></p>
+                </div>
+                <div class="home-menu">
+                    <button class="btn btn-primary btn-large" onclick="app.navigateTo('room-list')">
+                        <i class="fas fa-clipboard-check"></i> MULAI ABSENSI RUANGAN
+                    </button>
+                    <button class="btn btn-secondary btn-large" onclick="app.navigateTo('today-data')">
+                        <i class="fas fa-calendar-day"></i> DATA HARI INI
+                    </button>
+                    <button class="btn btn-outline btn-large" onclick="app.navigateTo('history')">
+                        <i class="fas fa-history"></i> RIWAYAT & LAPORAN
+                    </button>
+                </div>
+            </section>
+
+            <!-- Screen: Room List -->
+            <section id="screen-room-list" class="screen">
+                <div class="screen-header-text">
+                    <h3>Pilih Ruangan</h3>
+                    <p>Silakan pilih ruangan yang sedang dikunjungi.</p>
+                </div>
+                <div id="room-list-container" class="list-container">
+                    <!-- Rooms injected here -->
+                </div>
+            </section>
+
+            <!-- Screen: Monitoring Form -->
+            <section id="screen-monitoring-form" class="screen">
+                <div class="form-header">
+                    <h3 id="form-room-name">Nama Ruangan</h3>
+                    <div class="form-datetime">
+                        <span id="form-date"><i class="fas fa-calendar-alt"></i> <span></span></span>
+                        <span id="form-time"><i class="fas fa-clock"></i> <span></span></span>
+                    </div>
+                </div>
+
+                <form id="monitoring-form" onsubmit="event.preventDefault(); app.saveMonitoring();">
+                    <input type="hidden" id="form-room-id">
+                    <input type="hidden" id="form-has-patients" value="true">
+                    
+                    <!-- Dokter Jaga (Khusus IGD) -->
+                    <div id="section-dokter-jaga" class="card form-section hidden">
+                        <h4><i class="fas fa-user-md"></i> Dokter Jaga</h4>
+                        <input type="text" id="dokter-jaga" class="form-control" placeholder="Nama Dokter Jaga">
+                    </div>
+
+                    <datalist id="employee-names"></datalist>
+                    <!-- Absensi Pegawai -->
+                    <div class="card form-section">
+                        <h4><i class="fas fa-users"></i> Absensi Pegawai</h4>
+                        <div id="employee-list">
+                            <!-- Employees injected here -->
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm mt-10" onclick="app.addEmployeeField()">
+                            <i class="fas fa-plus"></i> Tambah Pegawai
+                        </button>
+                    </div>
+
+                    <!-- Data Pasien -->
+                    <div id="section-patients" class="card form-section">
+                        <h4><i class="fas fa-bed"></i> Data Pasien</h4>
+                        <div id="patient-list">
+                            <!-- Patients injected here -->
+                        </div>
+                        <button type="button" class="btn btn-outline btn-sm mt-10" onclick="app.addPatientField()">
+                            <i class="fas fa-plus"></i> Tambah Pasien
+                        </button>
+                        
+                        <div class="total-badge mt-10" style="text-align:left;">
+                            <div style="font-size:16px; margin-bottom:5px; text-align:right;">
+                                Total: <strong id="patient-total">0</strong> (L: <span id="patient-male-total">0</span> | P: <span id="patient-female-total">0</span>)
+                            </div>
+                            <div id="patient-breakdown" style="font-size:12px; color:#6c757d; border-top:1px dashed #dee2e6; padding-top:5px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Penggunaan Oksigen -->
+                    <div id="section-oxygen" class="card form-section">
+                        <h4><i class="fas fa-lungs"></i> Penggunaan Oksigen</h4>
+                        
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; background:#f8f9fa; padding:10px; border-radius:8px;">
+                            <div style="border-right:1px solid #dee2e6; padding-right:10px;">
+                                <div class="text-center text-muted" style="font-size:12px; margin-bottom:10px; font-weight:bold;">LAKI-LAKI</div>
+                                <div class="flex-column gap-10">
+                                    <div class="counter-group" style="margin-bottom:0;">
+                                        <label style="font-size:12px;">Terpakai:</label>
+                                        <div class="counter">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-tp-l', -1)">-</button>
+                                            <input type="number" id="oxy-tp-l" value="0" readonly style="width:25px;font-size:14px;padding:0;">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-tp-l', 1)">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="counter-group" style="margin-bottom:0;">
+                                        <label style="font-size:12px;">KP:</label>
+                                        <div class="counter">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-kp-l', -1)">-</button>
+                                            <input type="number" id="oxy-kp-l" value="0" readonly style="width:25px;font-size:14px;padding:0;">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-kp-l', 1)">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="padding-left:5px;">
+                                <div class="text-center text-muted" style="font-size:12px; margin-bottom:10px; font-weight:bold;">PEREMPUAN</div>
+                                <div class="flex-column gap-10">
+                                    <div class="counter-group" style="margin-bottom:0;">
+                                        <label style="font-size:12px;">Terpakai:</label>
+                                        <div class="counter">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-tp-p', -1)">-</button>
+                                            <input type="number" id="oxy-tp-p" value="0" readonly style="width:25px;font-size:14px;padding:0;">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-tp-p', 1)">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="counter-group" style="margin-bottom:0;">
+                                        <label style="font-size:12px;">KP:</label>
+                                        <div class="counter">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-kp-p', -1)">-</button>
+                                            <input type="number" id="oxy-kp-p" value="0" readonly style="width:25px;font-size:14px;padding:0;">
+                                            <button type="button" class="btn-counter" style="width:25px;height:25px;" onclick="app.updateCounter('oxy-kp-p', 1)">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="counter-group mt-10" style="background:#e9ecef; padding:10px; border-radius:8px;">
+                            <label>Oksigen Standby (Total):</label>
+                            <div class="counter">
+                                <button type="button" class="btn-counter" onclick="app.updateCounter('oxy-sb', -1)">-</button>
+                                <input type="number" id="oxy-sb" value="0" readonly>
+                                <button type="button" class="btn-counter" onclick="app.updateCounter('oxy-sb', 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permasalahan Ruangan -->
+                    <div class="card form-section">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Permasalahan Ruangan</h4>
+                        <textarea id="issue-text" class="form-control" rows="4" placeholder="Ketik permasalahan ruangan di sini (kosongkan jika tidak ada)..."></textarea>
+                    </div>
+
+                    <!-- Catatan Petugas -->
+                    <div class="card form-section">
+                        <h4><i class="fas fa-edit"></i> Catatan</h4>
+                        <textarea id="notes" class="form-control" rows="3" placeholder="Tambahkan catatan jika perlu..."></textarea>
+                    </div>
+
+                    <!-- Foto Dokumentasi -->
+                    <div class="card form-section">
+                        <h4><i class="fas fa-camera"></i> Foto Dokumentasi</h4>
+                        <div class="photo-area">
+                            <button type="button" class="btn btn-outline" id="btn-take-photo" onclick="document.getElementById('camera-input').click()">
+                                <i class="fas fa-camera"></i> Ambil Foto
+                            </button>
+                            <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="app.handlePhoto(event)">
+                            <div id="photo-preview-container" class="hidden mt-10 relative">
+                                <img id="photo-preview" src="" alt="Preview">
+                                <button type="button" class="btn-remove-photo" onclick="app.removePhoto()"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions pt-20 pb-40">
+                        <button type="submit" class="btn btn-primary btn-large w-full">
+                            <i class="fas fa-save"></i> SIMPAN MONITORING
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Screen: Success -->
+            <section id="screen-success" class="screen flex-center">
+                <div class="success-card text-center">
+                    <div class="success-icon"><i class="fas fa-check-circle"></i></div>
+                    <h3 id="success-message">Data berhasil disimpan.</h3>
+                    <div class="mt-20 flex-column gap-10">
+                        <button class="btn btn-primary btn-large" onclick="app.navigateTo('room-list')">
+                            RUANGAN BERIKUTNYA
+                        </button>
+                        <button class="btn btn-secondary btn-large" onclick="app.navigateTo('today-data')">
+                            KEMBALI KE DATA HARI INI
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Screen: Today's Data -->
+            <section id="screen-today-data" class="screen">
+                <div class="screen-header-text">
+                    <h3>Monitoring Hari Ini</h3>
+                    <p id="today-data-date" class="text-muted"></p>
+                </div>
+
+                <div class="stats-cards mt-10">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">Total Ruangan</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-value" id="stat-visited">0</div>
+                        <div class="stat-label">Sudah Dikunjungi</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-value" id="stat-unvisited">0</div>
+                        <div class="stat-label">Belum Dikunjungi</div>
+                    </div>
+                </div>
+
+                <div id="today-rooms-list" class="list-container mt-20">
+                    <!-- Today's rooms injected here -->
+                </div>
+            </section>
+
+            <!-- Screen: Room Detail -->
+            <section id="screen-room-detail" class="screen">
+                <div class="card detail-card" id="detail-content">
+                    <!-- Detail injected here -->
+                </div>
+            </section>
+
+            <!-- Screen: History -->
+            <section id="screen-history" class="screen">
+                <div class="screen-header-text">
+                    <h3>Riwayat & Laporan</h3>
+                    <p>Pilih tanggal untuk melihat data atau membuat laporan.</p>
+                </div>
+                
+                <div class="card mb-20">
+                    <div class="input-group">
+                        <label>Pilih Tanggal:</label>
+                        <input type="date" id="history-date" class="form-control" onchange="app.loadHistoryByDate()">
+                    </div>
+                    <div class="mt-10 action-group" style="display:flex; flex-direction:column; gap:10px;">
+                        <button class="btn btn-success" style="width:100%; background:#25D366; border-color:#25D366; color:white; font-weight:bold;" onclick="app.actionReport('whatsapp')">
+                            <i class="fab fa-whatsapp"></i> KIRIM KE WHATSAPP
+                        </button>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-secondary" style="flex:1; background:#6c757d; color:#fff;" onclick="app.actionReport('preview')">
+                                <i class="fas fa-eye"></i> PREVIEW PDF
+                            </button>
+                            <button class="btn btn-primary" style="flex:1;" onclick="app.actionReport('print')">
+                                <i class="fas fa-print"></i> CETAK PDF
+                            </button>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn btn-danger" style="flex:1; background:#dc3545;" onclick="app.actionReport('download')">
+                                <i class="fas fa-file-pdf"></i> DOWNLOAD PDF
+                            </button>
+                            <button class="btn btn-success" style="flex:1; background:#198754;" onclick="app.actionReport('excel')">
+                                <i class="fas fa-file-excel"></i> EXPORT EXCEL
+                            </button>
+                        </div>
+                        <button class="btn btn-dark" style="width:100%; background:#343a40;" onclick="app.deleteHistoryDate(document.getElementById('history-date').value)">
+                            <i class="fas fa-trash"></i> HAPUS DATA
+                        </button>
+                    </div>
+                </div>
+
+                <div id="history-summary" class="stats-card mb-20 hidden">
+                    <h4><span id="history-summary-date"></span></h4>
+                    <p><strong id="history-summary-count">0</strong> ruangan dimonitor</p>
+                </div>
+
+                <div id="history-rooms-list" class="list-container">
+                    <!-- History items injected here -->
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Register Service Worker for Offline PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('Service Worker Registered!', reg);
+            }).catch(err => console.error('Service worker registration failed', err));
+        }
+    </script>
+</body>
+</html>

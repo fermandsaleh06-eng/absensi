@@ -1,0 +1,16 @@
+{
+    "name": "Absensi & Monitoring RSUD",
+    "short_name": "RSUD Monitoring",
+    "start_url": "index.html",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#0d6efd",
+    "description": "Aplikasi pencatatan absensi dan kondisi ruangan rumah sakit secara offline",
+    "icons": [
+        {
+            "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iIzBkNmVmZCI+PHBhdGggZD0iTTE5IDNIMTRWMUgxMFYzSDVDMy45IDMgMyAzLjkgMyA1VjE5QzMgMjAuMSAzLjkgMjEgNSAyMUgxOUMyMC4xIDIxIDIxIDIwLjEgMjEgMTlWNUMyMSA0LjkgMjAuMSAzIDE5IDNNMTAgNVY0SDE0VjVIMTBWNU0xOSA1VjE5SDVWNUgxOVpNOCAxM0gxMFYxNUgxMlYxM0gxNFYxMUgxMlY5SDEwVjExSDhWMTNaIiAvPjwvc3ZnPg==",
+            "sizes": "192x192",
+            "type": "image/svg+xml"
+        }
+    ]
+}
